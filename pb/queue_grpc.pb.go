@@ -23,7 +23,6 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type QueueServiceClient interface {
 	Join(ctx context.Context, in *JoinRequest, opts ...grpc.CallOption) (QueueService_JoinClient, error)
-	Leave(ctx context.Context, in *LeaveRequest, opts ...grpc.CallOption) (*LeaveResponse, error)
 }
 
 type queueServiceClient struct {
@@ -66,21 +65,11 @@ func (x *queueServiceJoinClient) Recv() (*JoinResponse, error) {
 	return m, nil
 }
 
-func (c *queueServiceClient) Leave(ctx context.Context, in *LeaveRequest, opts ...grpc.CallOption) (*LeaveResponse, error) {
-	out := new(LeaveResponse)
-	err := c.cc.Invoke(ctx, "/QueueService/Leave", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 // QueueServiceServer is the server API for QueueService service.
 // All implementations must embed UnimplementedQueueServiceServer
 // for forward compatibility
 type QueueServiceServer interface {
 	Join(*JoinRequest, QueueService_JoinServer) error
-	Leave(context.Context, *LeaveRequest) (*LeaveResponse, error)
 	mustEmbedUnimplementedQueueServiceServer()
 }
 
@@ -90,9 +79,6 @@ type UnimplementedQueueServiceServer struct {
 
 func (UnimplementedQueueServiceServer) Join(*JoinRequest, QueueService_JoinServer) error {
 	return status.Errorf(codes.Unimplemented, "method Join not implemented")
-}
-func (UnimplementedQueueServiceServer) Leave(context.Context, *LeaveRequest) (*LeaveResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Leave not implemented")
 }
 func (UnimplementedQueueServiceServer) mustEmbedUnimplementedQueueServiceServer() {}
 
@@ -128,36 +114,13 @@ func (x *queueServiceJoinServer) Send(m *JoinResponse) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-func _QueueService_Leave_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(LeaveRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(QueueServiceServer).Leave(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/QueueService/Leave",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(QueueServiceServer).Leave(ctx, req.(*LeaveRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 // QueueService_ServiceDesc is the grpc.ServiceDesc for QueueService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var QueueService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "QueueService",
 	HandlerType: (*QueueServiceServer)(nil),
-	Methods: []grpc.MethodDesc{
-		{
-			MethodName: "Leave",
-			Handler:    _QueueService_Leave_Handler,
-		},
-	},
+	Methods:     []grpc.MethodDesc{},
 	Streams: []grpc.StreamDesc{
 		{
 			StreamName:    "Join",

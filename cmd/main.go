@@ -1,61 +1,50 @@
 package main
 
 import (
-	hive "github.com/cbotte21/hive-go/pb"
-	"github.com/cbotte21/judicial-go/internal"
-	pb "github.com/cbotte21/judicial-go/pb"
-	"github.com/joho/godotenv"
+	chess "github.com/cbotte21/chess-go/pb"
+	"github.com/cbotte21/microservice-common/pkg/datastore"
+	"github.com/cbotte21/microservice-common/pkg/enviroment"
+	"github.com/cbotte21/queue-go/internal"
+	"github.com/cbotte21/queue-go/pb"
+	"github.com/cbotte21/queue-go/schema"
 	"google.golang.org/grpc"
 	"log"
 	"net"
-	"os"
-	"strconv"
 )
 
 func main() {
-	//Verify enviroment variables exist
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatalf("could not load enviroment variables")
-	}
-	verifyEnvVariable("port")
-	//Get port
-	port, err := strconv.Atoi(os.Getenv("port"))
-	if err != nil {
-		log.Fatalf("could not parse {port} enviroment variable")
-	}
+	// Verify environment variables exist
+	enviroment.VerifyEnvVariable("port")
+	enviroment.VerifyEnvVariable("chess_addr")
 
-	//Setup tcp listener
-	lis, err := net.Listen("tcp", ":"+strconv.Itoa(port))
+	port := enviroment.GetEnvVariable("port")
+
+	// Setup tcp listener
+	lis, err := net.Listen("tcp", ":"+port)
 	if err != nil {
-		log.Fatalf("Failed to listen on port: %d", port)
+		log.Fatalf("Failed to listen on port: %s", port)
 	}
 	grpcServer := grpc.NewServer()
 
-	//Register handler(s) to attach
-	hiveClient := hive.NewHiveServiceClient(getConn())
-	//Initialize judicial
-	jury := internal.NewJudicial(&hiveClient)
+	// Register handlers to attach
+	redisClient := datastore.RedisClient[schema.Queue]{}
+	redisClient.Init()
 
-	pb.RegisterJudicialServiceServer(grpcServer, &jury)
+	chessClient := chess.NewChessServiceClient(getChessConn())
 
+	// Initialize hive
+	queue := internal.NewQueue(&chessClient, &redisClient)
+	pb.RegisterQueueServiceServer(grpcServer, &queue)
 	if err := grpcServer.Serve(lis); err != nil {
-		log.Fatalf("Failed to initialize grpc server.")
+		log.Fatalf(err.Error())
 	}
 }
 
-func getConn() *grpc.ClientConn {
+func getChessConn() *grpc.ClientConn {
 	var conn *grpc.ClientConn
-	conn, err := grpc.Dial(":9000", grpc.WithInsecure())
+	conn, err := grpc.Dial(enviroment.GetEnvVariable("chess_addr"), grpc.WithInsecure())
 	if err != nil {
 		log.Fatalf(err.Error())
 	}
 	return conn
-}
-
-func verifyEnvVariable(name string) {
-	_, uriPresent := os.LookupEnv(name)
-	if !uriPresent {
-		log.Fatalf("could not find {" + name + "} environment variable")
-	}
 }
