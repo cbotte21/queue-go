@@ -46,6 +46,7 @@ func (queue *Queue) Join(joinRequest *pb.JoinRequest, stream pb.QueueService_Joi
 		ch := sub.Channel()
 		for range ch {
 			*started = 1
+			break
 		}
 	}(&started)
 
