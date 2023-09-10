@@ -50,7 +50,7 @@ build {
   #}
   post-processors {
     post-processor "docker-tag" {
-      repository = "chess/queue-go"
+      repository = "chess/${var.name}"
       tags       = ["0.1"]
     }
   }
